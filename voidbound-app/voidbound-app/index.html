@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Voidbound Isle Party Tracker</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#2c6e7f"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f3ec;--fg:#23201a;--mut:#6f685a;--card:#fffdf8;--line:#d8d0bf;--acc:#2c6e7f;--ok:#3a7d44;--warn:#b5532a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15181a;--fg:#e8e4da;--mut:#9a9486;--card:#1e2326;--line:#343b3f;--acc:#6bb7c9;--ok:#78c081;--warn:#e08a5f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15181a;--fg:#e8e4da;--mut:#9a9486;--card:#1e2326;--line:#343b3f;--acc:#6bb7c9;--ok:#78c081;--warn:#e08a5f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 Georgia,"Times New Roman",serif;max-width:900px;margin-inline:auto;padding:14px}
+h1{font-size:1.35rem;margin:0}h2{font-size:1.05rem;margin:18px 0 6px}
+.sub{color:var(--mut);font-size:.85rem;margin:2px 0 10px}
+.tabs{display:flex;gap:6px;margin:10px 0}
+.tabs button{flex:1;padding:9px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;font:inherit;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--acc);color:#fff;border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stat{font-size:.95rem}.stat b{font-size:1.15rem}
+input[type=text],input[type=number],textarea,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
+textarea{width:100%;min-height:56px}
+.btn{padding:8px 12px;border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:8px;font:inherit;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+.st{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line)}
+.st.dim{opacity:.5}.st small{color:var(--mut);display:block}
+.st input[type=number]{width:3.6em}
+.warn{color:var(--warn)}.legend{font-size:.8rem;color:var(--mut)}details{border-top:1px solid var(--line);padding:6px 0}summary{cursor:pointer;font-weight:bold}summary small{font-weight:normal;color:var(--mut)}.card details:first-of-type{border-top:0}
+#svgwrap svg{width:100%;height:auto;display:block;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);touch-action:manipulation}
+.terr{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.terr button{padding:6px 9px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;font:inherit;font-size:.85rem;cursor:pointer}
+.terr button[aria-pressed="true"]{background:var(--acc);color:#fff;border-color:var(--acc)}
+</style></head><body>
+<h1>Voidbound Isle: Party Tracker</h1>
+<div class="sub" id="sync"></div>
+<div class="tabs" role="tablist"><button role="tab" id="t-map" aria-selected="true">Map</button><button role="tab" id="t-city" aria-selected="false">City</button><button role="tab" id="t-cal" aria-selected="false">Chronicle</button><button role="tab" id="t-exp" aria-selected="false">Explore</button></div>
+<div id="map"></div><div id="city" hidden></div><div id="cal" hidden></div><div id="exp" hidden></div>
+<script>
+const S=[["Fishery",1,6,"+1 BP per level on each level-up"],["Garden",1,4,"Grow downtime action"],["General Store",1,8,"Buy mundane items up to 1 level above the city"],["Herbalist",1,5,"+2 Medicine in the city"],["Inn",1,8,"+2 Society in the city"],["Lumber Camp",1,6,"+1 BP per level on each level-up"],["Shrine",1,4,"Buy divine items and spells (1 level up)"],["Tavern",1,6,"+2 Gather Information, Gain Contact, Gossip"],["Wooden Walls",1,8,"A wall to help in defense"],
+["Barracks",2,10,"Soldiers help in defense"],["Brewery",2,8,"+2 Diplomacy in the city"],["Hunting Lodge",2,7,"+2 Survival in the city"],["Library",2,8,"+2 Recall Knowledge, Researching, Decipher Writing"],["Munitions Depot",2,10,"Firearms, ammunition, gunpowder"],["Smithy",2,8,"+2 Craft (metal); uncommon weapons and armor"],["Witch’s Cottage",2,7,"Occult items and spells (1 level up)"],
+["Alchemical Laboratory",3,18,"Alchemical items up to 2 levels up; uncommon alchemy"],["Fort",3,32,"+2 Intimidation; fewer civilian casualties"],["Machinist",3,22,"Uncommon clockwork; +2 Craft (mechanisms)"],["Monument",3,7,"Allied soldiers get inspire courage"],["Pier",3,16,"Aquatic vehicles"],["Stable",3,10,"Mounts"],["Town Hall",3,22,"+2 to influence the populace"],["Trade Shop",3,10,"+1 lore and crafting for one trade (can build several)","",1],["Watchtower",3,12,"Advance warning of attacks"],
+["Marketplace",4,48,"Mundane items 2 levels up, common magic 1 up","Upgrade from General Store"],["Menagerie",4,15,"Common animals and gear"],["Specialized Artisan",4,10,"Special craft goods; +2 Craft (can build several)","",1],
+["Arcanist’s Tower",5,30,"Arcane items and spells (2 levels up)"],["Garrison",5,28,"More, stronger defenders","Upgrade from Barracks"],["Guildhall",5,34,"+2 lore and crafting for one guild (can build several)","Upgrade from Trade Shop",1],["Sacred Grove",5,36,"Primal items and spells (2 levels up)"],["Thieves’ Guild",5,25,"Illicit goods; +2 Thievery"],
+["Temple",7,32,"Divine items and spells (2 levels up)","Upgrade from Shrine"],["Magic Shop",7,40,"Occult items and spells (2 levels up)","Upgrade from Witch’s Cottage"],
+["Embassy",8,26,"Better relations with visitors (GM decides)"],["Waterfront",8,80,"City counts as 1 level higher for trade","Upgrade from Pier"],
+["Arena",9,40,"Faster combat retraining; +2 Athletics"],["Fortress",9,54,"No civilian casualties unless defenses fall; siege weapons","Upgrade from Fort"],["Hospital",9,30,"+4 Medicine in the city","Upgrade from Herbalist"],["Theater",9,30,"+2 Performance in the city"],
+["Academy",10,52,"+4 Recall Knowledge, Researching, Decipher Writing","Upgrade from Library"],["Tech Research Lab",10,60,"+2 Tech Lore; craft tech items","Needs Master Tech Lore"]];
+
+const COLS=15,ROWS=13,R=26,DX=R*1.5,DY=R*Math.sqrt(3),OX=30,OY=64,INK="#3b2f1e";
+const T={sea:["Sea","#a9c7cf"],marsh:["Marsh","#a9b58a"],jungle:["Jungle","#7fa36b"],plains:["Plains","#cdd09a"],desert:["Desert","#e0cc95"],ice:["Ice","#dbe8ec"],mountain:["Mountains","#b29a7e"],volcano:["Volcano","#c98a72"],ruins:["Ruins","#b9b0a0"],chasm:["Chasm","#8a7f72"],city:["City","#d9b97a"]};
+const GL={
+sea:'<path d="M5 14q5-6 10 0t10 0t10 0M5 24q5-6 10 0t10 0t10 0"/>',
+marsh:'<path d="M10 30V12M10 12l-3 4M10 12l3 4M20 30V8M20 8l-3 5M20 8l3 5M30 30V14M30 14l-3 4M30 14l3 4M4 33h32"/>',
+jungle:'<circle cx="12" cy="15" r="7"/><circle cx="27" cy="14" r="8"/><circle cx="19" cy="26" r="8"/><path d="M12 22v5M27 22v6M19 34v3"/>',
+plains:'<path d="M8 28l2-8l2 8M18 30l2-10l2 10M28 27l2-8l2 8M4 33h32"/>',
+desert:'<path d="M3 30q9-14 17-2q8-12 17 2M8 34h24"/>',
+ice:'<path d="M20 4v32M6 12l28 16M34 12L6 28M16 6l4 4l4-4M16 34l4-4l4 4"/>',
+mountain:'<path d="M3 34L17 8l8 14l5-8l8 20zM13 16l4 5l4-5"/>',
+volcano:'<path d="M5 34L16 14h8l11 20zM16 14l-2 4h12l-2-4M18 10q-3-4 2-6q4 3-1 6"/>',
+ruins:'<path d="M6 34V14h6v20M16 34V8h6v26M26 34V18h6v16M3 34h34M16 8l3 3l3-3"/>',
+chasm:'<path d="M4 8l9 8l-5 6l12 6l-6 8M36 6l-8 10l6 6l-10 6l5 8"/>',
+city:'<path d="M5 34V20l7-8l7 8v14M19 34V24l7-7l8 7v10M3 34h34M10 28h4v6h-4M24 28h5v6h-5"/>'};
+const DEF=()=>({h:{},j:"",c:{name:"",level:1,earned:14,built:{}},k:{day:1,trail:0,ev:[],xp:[],loot:[],gp:0}});
+let st=DEF(),ref=null,timer=null,sel=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function norm(d){const b=DEF();return {h:{...(d?.h||{})},j:d?.j||"",c:{...b.c,...(d?.c||{}),built:{...(d?.c?.built||{})}},k:{...b.k,...(d?.k||{})}}}
+try{st=norm(JSON.parse(localStorage.getItem("voidbound2")||"null"))}catch(e){}
+function setSync(){$("sync").textContent="Saved on this device. Use a save code (bottom of the Map tab) to share with the party."}
+function save(){try{localStorage.setItem("voidbound2",JSON.stringify(st))}catch(e){}
+ clearTimeout(timer);timer=setTimeout(()=>{if(ref)ref.set(st).catch(()=>{})},400)}
+function commit(){save();render(true)}
+const ctr=(c,r)=>[OX+R+c*DX,OY+DY/2+r*DY+(c%2?DY/2:0)];
+const pts=(x,y)=>[0,1,2,3,4,5].map(i=>{const a=Math.PI/3*i;return (x+R*Math.cos(a)).toFixed(1)+","+(y+R*Math.sin(a)).toFixed(1)}).join(" ");
+function hexSvg(){const W=OX*2+(COLS-1)*DX+2*R,H=OY+ROWS*DY+DY/2+34;let s=`<svg viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hand-drawn map of the island">
+<defs><filter id="pp"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="3" seed="4"/><feColorMatrix values="0 0 0 0 .45 0 0 0 0 .33 0 0 0 0 .18 0 0 0 .2 0"/></filter>
+<radialGradient id="vg" cx="50%" cy="50%" r="75%"><stop offset="60%" stop-color="#e9dcb8"/><stop offset="100%" stop-color="#c9b383"/></radialGradient></defs>
+<rect width="${W}" height="${H}" fill="url(#vg)"/><rect width="${W}" height="${H}" filter="url(#pp)"/>
+<rect x="8" y="8" width="${W-16}" height="${H-16}" fill="none" stroke="${INK}" stroke-width="2.5"/><rect x="14" y="14" width="${W-28}" height="${H-28}" fill="none" stroke="${INK}" stroke-width=".8"/>
+<text x="${W/2}" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-style="italic" fill="${INK}" letter-spacing="2">The Voidbound Isle</text>`;
+ const g=(sym,x,y,sz)=>`<g transform="translate(${x-sz/2},${y-sz/2}) scale(${sz/40})" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${GL[sym]}</g>`;
+ let top="";
+ for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const [x,y]=ctr(c,r),k=c+","+r,d=st.h[k],p=pts(x,y);
+  if(!d){s+=`<polygon points="${p}" fill="transparent" stroke="${INK}" stroke-opacity=".28" stroke-width="1" stroke-dasharray="2 4" data-k="${k}"/>`;continue}
+  s+=`<polygon points="${p}" fill="${(T[d.t]||T.plains)[1]}" fill-opacity=".85" stroke="${INK}" stroke-width="1.4" data-k="${k}"/>`+g(d.t,x,y-4,R*1.15);
+  if(d.l)s+=`<text x="${x}" y="${y+R*.72}" text-anchor="middle" font-family="Georgia,serif" font-size="8.5" font-style="italic" fill="${INK}" pointer-events="none">${esc(d.l.slice(0,13))}</text>`;
+  if(d.v==2)s+=`<path d="M${x+9} ${y-R*.55}v-13l10 4l-10 4" fill="#a33a2a" stroke="${INK}" stroke-width="1" pointer-events="none"/>`}
+ if(sel){const [x,y]=ctr(...sel.split(",").map(Number));top=`<polygon points="${pts(x,y)}" fill="none" stroke="#a33a2a" stroke-width="3" pointer-events="none"/>`}
+ const cx=W-62,cy=H-62;
+ s+=top+`<g transform="translate(${cx},${cy})" stroke="${INK}" fill="${INK}" pointer-events="none"><circle r="26" fill="none" stroke-width="1"/><path d="M0-34L6-6L0 0L-6-6zM0 34L6 6L0 0L-6 6zM-34 0L-6-6L0 0L-6 6zM34 0L6-6L0 0L6 6z" fill-opacity=".75"/><text y="-38" text-anchor="middle" font-size="11" font-family="Georgia,serif" stroke="none">N</text></g></svg>`;
+ return s}
+function edHtml(){if(!sel)return `<p class="legend">Tap a hex to chart it: choose its terrain and add a name or note. Tap a dotted hex for unexplored ground.</p>`;
+ const d=st.h[sel]||{};
+ return `<div class="terr">${Object.entries(T).map(([k,v])=>`<button data-t="${k}" aria-pressed="${d.t===k}">${v[0]}</button>`).join("")}</div>
+ <div class="row"><label>Status <select id="hv"><option value="1" ${d.v!=2?"selected":""}>Entered</option><option value="2" ${d.v==2?"selected":""}>Cleared</option></select></label>
+ <label>Name <input type="text" id="hl" maxlength="24" value="${esc(d.l||"")}"></label></div>
+ <textarea id="hn" placeholder="What did you find here?">${esc(d.n||"")}</textarea>
+ <p><button class="btn ghost" id="hx">Erase this hex</button></p>`}
+function renderMap(){const hs=Object.values(st.h),n=hs.length,cl=hs.filter(x=>x.v==2).length;
+ $("map").innerHTML=`<div class="card row"><span class="stat">Charted <b>${n}</b></span><span class="stat">Cleared <b>${cl}</b></span></div>
+ <div id="svgwrap">${hexSvg()}</div><div class="card" id="ed">${edHtml()}</div>
+ <div class="card"><label>Cartographer’s journal<textarea id="jn" placeholder="Landmarks, rumors, routes…">${esc(st.j)}</textarea></label></div><div class="card"><p class="legend">Share or back up: copy a save code and send it to your party, or paste one here to load it.</p><div class="row"><button class="btn" id="sc">Copy save code</button></div><textarea id="sl" placeholder="Paste a save code here"></textarea><button class="btn ghost" id="ll">Load pasted code</button></div>`}
+const bonusOf=c=>(c.built[0]?1:0)+(c.built[5]?1:0);
+const incAt=(c,l)=>(8+bonusOf(c))*l;
+function lvlUp(c){c.level++;const b=bonusOf(c),g=(8+b)*c.level;c.earned+=g;c.log=`Level ${c.level}: +${g} BP (8 base${c.built[0]?" + 1 Fishery":""}${c.built[5]?" + 1 Lumber Camp":""} = ${8+b} × ${c.level})`}
+function renderCity(){const c=st.c,sp=S.reduce((a,s,i)=>a+s[2]*(c.built[i]||0),0),av=c.earned-sp;
+ const inc=incAt(c,c.level+1),bn=bonusOf(c);
+ let h=`<div class="card"><div class="row"><label>City name <input type="text" id="cn" value="${esc(c.name)}"></label><label>Level <input type="number" id="cl" min="1" max="20" value="${c.level}" style="width:4em"></label><label>BP earned <input type="number" id="ce" value="${c.earned}" style="width:5em"></label></div>
+ <p class="stat">Spent <b>${sp}</b> · Available <b class="${av<0?"warn":""}">${av}</b> BP · Next level-up: <b>+${inc}</b> BP</p><p class="legend">Income per level: 8 base${c.built[0]?" + 1 Fishery":""}${c.built[5]?" + 1 Lumber Camp":""} = ${8+bn} × party level.${c.log?" Last: "+esc(c.log):""}</p><button class="btn" id="lu">Level up the city (+${inc} BP)</button></div>`;
+ [...new Set(S.map(s=>s[1]))].filter(l=>l<=c.level||S.some((s,i)=>s[1]===l&&c.built[i])).forEach(l=>{h+=`<h2>Level ${l} structures</h2><div class="card">`+S.map((s,i)=>s[1]===l?[s,i]:null).filter(Boolean).map(([s,i])=>{
+  const n=c.built[i]||0,ok=n>0||s[2]<=av;
+  const ctl=s[5]?`<input type="number" min="0" max="9" data-s="${i}" value="${n}">`:`<input type="checkbox" data-s="${i}" ${n?"checked":""}>`;
+  return `<div class="st ${ok?"":"dim"}">${ctl}<div><b>${esc(s[0])}</b> · ${s[2]} BP<small>${esc(s[3])}${s[4]?" ("+esc(s[4])+")":""}</small></div></div>`}).join("")+`</div>`});
+ h+=`<p class="legend">More structures unlock as the city levels up.</p>`;$("city").innerHTML=h}
+
+function renderCal(){const k=st.k,mo=Math.floor((k.day-1)/30)+1,dd=(k.day-1)%30+1,xp=k.xp.reduce((a,x)=>a+x.a,0);
+ const lst=(arr,key,fn)=>arr.map((x,i)=>`<div class="st"><div style="flex:1">${fn(x)}</div><button class="btn ghost" data-del="${key}:${i}" aria-label="Remove">✕</button></div>`).reverse().join("");
+ $("cal").innerHTML=`<div class="card"><h2 style="margin-top:0">Calendar</h2>
+ <div class="row"><label>Day <input type="number" id="dy" min="1" value="${k.day}" style="width:5em"></label><span class="stat">Month <b>${mo}</b>, day <b>${dd}</b></span></div>
+ <div class="row" style="margin-top:6px"><button class="btn ghost" id="dm1">−1 day</button><button class="btn" id="dp1">+1 day</button><button class="btn" id="dp7">+1 week</button></div>
+ <div class="row" style="margin-top:8px"><label>Days on the trail <input type="number" id="tr" min="0" value="${k.trail}" style="width:5em"></label><button class="btn ghost" id="tm1">−1</button><button class="btn" id="tp1">+1 trail day</button></div>
+ <p class="legend">Days since landing; months are counted as 30 days.</p>
+ <div class="row"><input type="text" id="evt" placeholder="What happened today?" style="flex:1;min-width:10em"><button class="btn" id="evadd">Log event</button></div>${lst(k.ev,"ev",x=>`<b>Day ${x.d}</b> · ${esc(x.t)}`)}</div>
+ <div class="card"><h2 style="margin-top:0">Party XP: <b>${xp}</b></h2>
+ <div class="row"><input type="number" id="xpa" placeholder="XP" style="width:6em"><input type="text" id="xpr" placeholder="Reason" style="flex:1;min-width:8em"><button class="btn" id="xpadd">Add XP</button></div>
+ <p class="legend">Use a negative number to correct a mistake.</p>${lst(k.xp,"xp",x=>`<b>${x.a>0?"+":""}${x.a}</b> XP · Day ${x.d}${x.r?" · "+esc(x.r):""}`)}</div>
+ <div class="card"><h2 style="margin-top:0">Loot</h2>
+ <div class="row"><label>Party gold <input type="number" id="gp" step="any" value="${k.gp}" style="width:7em"></label></div>
+ <div class="row" style="margin-top:8px"><input type="text" id="lt" placeholder="Item" style="flex:1;min-width:8em"><input type="number" id="lq" min="1" value="1" style="width:4em"><input type="text" id="lw" placeholder="Carried by" style="width:8em"><button class="btn" id="lootadd">Add</button></div>
+ ${lst(k.loot,"loot",x=>`<b>${esc(x.n)}</b>${x.q>1?" ×"+x.q:""}${x.w?" · "+esc(x.w):""}`)}</div>`}
+function render(force){const a=document.activeElement;if(!force&&a&&(a.tagName==="TEXTAREA"||a.type==="text"||a.type==="number"))return;renderMap();renderCity();renderCal()}
+document.addEventListener("click",e=>{
+ const k=e.target.closest("[data-k]");if(k){sel=k.dataset.k;render(true);return}
+ const t=e.target.closest("[data-t]");if(t&&sel){st.h[sel]={...(st.h[sel]||{v:1}),t:t.dataset.t};commit();return}
+ if(e.target.id==="hx"&&sel){delete st.h[sel];sel=null;commit();return}
+ const kk=st.k,id=e.target.id,del=e.target.closest("[data-del]");
+ if(del){const [a,i]=del.dataset.del.split(":");kk[a].splice(+i,1);commit();return}
+ if(id==="dp1"){kk.day++;commit();return}if(id==="dp7"){kk.day+=7;commit();return}if(id==="dm1"){kk.day=Math.max(1,kk.day-1);commit();return}
+ if(id==="tp1"){kk.trail++;commit();return}if(id==="tm1"){kk.trail=Math.max(0,kk.trail-1);commit();return}
+ if(id==="evadd"){const v=$("evt").value.trim();if(v){kk.ev.push({d:kk.day,t:v});commit()}return}
+ if(id==="xpadd"){const a=parseInt($("xpa").value);if(a){kk.xp.push({a,r:$("xpr").value.trim(),d:kk.day});commit()}return}
+ if(id==="lootadd"){const n=$("lt").value.trim();if(n){kk.loot.push({n,q:Math.max(1,parseInt($("lq").value)||1),w:$("lw").value.trim()});commit()}return}
+ if(e.target.id==="sc"){const code=btoa(unescape(encodeURIComponent(JSON.stringify(st))));(navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject()).then(()=>alert("Save code copied. Send it to your party.")).catch(()=>{$("sl").value=code;alert("Copy the code from the box.")});return}
+ if(e.target.id==="ll"){try{const d=JSON.parse(decodeURIComponent(escape(atob($("sl").value.trim()))));if(confirm("Replace this device’s map, city and chronicle with the pasted save?")){st=norm(d);commit()}}catch(err){alert("That save code didn’t work.")}return}
+ if(e.target.id==="lu"){lvlUp(st.c);commit()}});
+document.addEventListener("change",e=>{const t=e.target;
+ if(t.id==="hv"&&sel&&st.h[sel]){st.h[sel].v=+t.value;commit()}
+ else if(t.id==="hl"&&sel){st.h[sel]={...(st.h[sel]||{t:"plains",v:1}),l:t.value};commit()}
+ else if(t.id==="hn"&&sel){st.h[sel]={...(st.h[sel]||{t:"plains",v:1}),n:t.value};save()}
+ else if(t.id==="jn"){st.j=t.value;save()}else if(t.id==="dy"){st.k.day=Math.max(1,parseInt(t.value)||1);commit()}else if(t.id==="tr"){st.k.trail=Math.max(0,parseInt(t.value)||0);commit()}else if(t.id==="gp"){st.k.gp=parseFloat(t.value)||0;save()}
+ else if(t.dataset.s!==undefined){const v=t.type==="checkbox"?(t.checked?1:0):Math.max(0,parseInt(t.value)||0);st.c.built[t.dataset.s]=v;commit()}
+ else if(t.id==="cn"){st.c.name=t.value;save()}else if(t.id==="cl"){const c=st.c,to=Math.min(20,Math.max(1,parseInt(t.value)||1));if(to>c.level){while(c.level<to)lvlUp(c)}else c.level=to;commit()}else if(t.id==="ce"){st.c.earned=parseInt(t.value)||0;commit()}});
+function tab(w){$("map").hidden=w!=="map";$("city").hidden=w!=="city";$("cal").hidden=w!=="cal";$("exp").hidden=w!=="exp";$("t-map").setAttribute("aria-selected",w==="map");$("t-city").setAttribute("aria-selected",w==="city");$("t-cal").setAttribute("aria-selected",w==="cal");$("t-exp").setAttribute("aria-selected",w==="exp")}
+$("t-map").onclick=()=>tab("map");$("t-city").onclick=()=>tab("city");$("t-cal").onclick=()=>tab("cal");$("t-exp").onclick=()=>tab("exp");
+$("exp").innerHTML="<div class=\"card\"><h2 style=\"margin-top:0\">Moving across the island</h2><p>Each hex is about 12 miles across. A normal day is 8 hours of rest, 8 hours of travel and 8 hours for healing and dealing with whatever is in that hex. By default you start in the middle of a hex and camp in the middle of the next.</p><details open><summary>Take your time (default)</summary><p>One day takes you across a hex and lets you explore it. This is when you find what the hex holds.</p></details><details><summary>Rush through a hex</summary><p>One character rolls Survival (your GM sets the DC) and trained allies can Aid. You see nothing of the hex while rushing, and the result is one step worse in a hex you haven’t explored.</p><ul><li><b>Critical success:</b> half the usual time, and no random encounters.</li><li><b>Success:</b> half the usual time.</li><li><b>Failure:</b> no effect.</li><li><b>Critical failure:</b> you get lost. The crossing takes twice as long and everyone is fatigued.</li></ul></details><details><summary>Mounts and boats</summary><p>Mounts can double your speed on open ground (not in thick jungle), and boats halve crossing times on water. Ask your GM.</p></details></div><div class=\"card\"><h2 style=\"margin-top:0\">Exploration activities</h2><p class=\"legend\">While travelling, each character picks one activity. Tap an activity for what it does. See the Pathfinder rules for full details.</p><details><summary>Avoid Notice <small>(Stealth)</small></summary><p>Move at half speed while trying not to be noticed. If a fight begins, you can roll Stealth for initiative.</p></details><details><summary>Cover Tracks <small>(Survival)</small></summary><p>Move at half speed while hiding your group’s trail so others have a harder time following.</p></details><details><summary>Defend</summary><p>Travel at half speed with a shield raised, so it is already up if a fight starts.</p></details><details><summary>Detect Magic</summary><p>Keep casting detect magic as you go, moving at half speed or slower.</p></details><details><summary>Follow the Expert <small>(Varies)</small></summary><p>Follow an ally who is better at a skill and gain a circumstance bonus to it. The bonus grows with their proficiency.</p></details><details><summary>Hustle</summary><p>Move at double speed for a short time. How long depends on your Constitution.</p></details><details><summary>Investigate <small>(Recall Knowledge)</small></summary><p>Study what is around you and recall useful facts, moving at half speed.</p></details><details><summary>Repeat a Spell</summary><p>Keep recasting a spell that needs it, moving at half speed.</p></details><details><summary>Scout <small>(Perception)</small></summary><p>Look ahead and around the group. If a fight starts, allies get a bonus to initiative. Half speed.</p></details><details><summary>Search <small>(Perception)</small></summary><p>Look closely for hidden doors, traps and secrets as you move at half speed.</p></details><details><summary>Sense Direction <small>(Survival)</small></summary><p>Keep your bearings and avoid getting lost without a map or compass.</p></details><details><summary>Track <small>(Survival)</small></summary><p>Follow the trail of a creature or group at half speed.</p></details></div><div class=\"card\"><h2 style=\"margin-top:0\">At camp</h2><details open><summary>Rest</summary><p>Eight hours of sleep restores you for the next day.</p></details><details><summary>Treat Wounds <small>(Medicine)</small></summary><p>Spend about 10 minutes tending a creature’s injuries to heal it.</p></details><details><summary>Refocus</summary><p>Spend about 10 minutes in quiet focus to regain a Focus Point.</p></details><details><summary>Campfire</summary><p>On the first night of a session your GM may give you a role-playing prompt. Share a story or a moment with your party.</p></details></div>";
+render(true);setSync();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
